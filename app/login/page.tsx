@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { auth } from "@/lib/firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { ShieldCheck } from "lucide-react";
+// Removed Firebase imports to use custom OTP API
+
 
 export default function LoginPage() {
   const [step, setStep] = useState<"phone" | "otp" | "role">("phone");
@@ -19,17 +20,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [error, setError] = useState("");
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+// Removed confirmationResult state
+
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible",
-        callback: () => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        },
-      });
-    }
+    // reCAPTCHA initialization removed
   }, []);
 
   const handleSendOTP = async () => {
@@ -44,20 +39,22 @@ export default function LoginPage() {
           return;
         }
 
-        const appVerifier = window.recaptchaVerifier;
-        const formattedPhone = `+91${phone}`;
-        const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
-        setConfirmationResult(result);
+        const response = await fetch("/api/auth/otp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to send OTP");
+        }
+
         setStep("otp");
       } catch (err: any) {
-        console.error("Firebase Error:", err);
-        setError(err.message || "Failed to send OTP. Check console for details.");
-        // Reset recaptcha on error
-        if (window.recaptchaVerifier) {
-          window.recaptchaVerifier.render().then((widgetId: any) => {
-            window.grecaptcha.reset(widgetId);
-          });
-        }
+        console.error("OTP Send Error:", err);
+        setError(err.message || "Failed to send OTP. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -65,7 +62,7 @@ export default function LoginPage() {
   };
 
   const handleVerifyOTP = async () => {
-    if (otp.length === 6 && confirmationResult) {
+    if (otp.length === 6) {
       setLoading(true);
       setError("");
       try {
@@ -75,10 +72,19 @@ export default function LoginPage() {
           return;
         }
 
-        if (confirmationResult) {
-          await confirmationResult.confirm(otp);
-          setStep("role");
+        const response = await fetch("/api/auth/otp/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, otp }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Invalid or expired OTP");
         }
+
+        setStep("role");
       } catch (err: any) {
         setError(err.message || "Invalid or expired OTP");
       } finally {
@@ -192,7 +198,7 @@ export default function LoginPage() {
 
                 <p className="text-center text-xs text-gray-500 dark:text-gray-400">
                   <Lock className="h-3 w-3 inline mr-1" />
-                  Demo mode: Enter any 10-digit number, any 4-digit OTP
+                  Demo mode: 1234567890 | OTP: 123456
                 </p>
               </motion.div>
             )}

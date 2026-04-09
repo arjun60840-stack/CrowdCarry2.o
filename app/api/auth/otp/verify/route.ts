@@ -15,8 +15,8 @@ export async function POST(req: Request) {
     });
 
     if (!token) {
-      // Demo mode: Allow any 4-digit OTP if not found in database
-      if (otp.length === 4) {
+      // Demo mode: Allow any 6-digit OTP if not found in database (for testing)
+      if (otp.length === 6) {
         return NextResponse.json({ success: true, message: "Verified (Demo mode)" });
       }
       return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 401 });
