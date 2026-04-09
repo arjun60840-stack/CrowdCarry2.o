@@ -4,73 +4,136 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { 
-  Package, MapPin, Train, Shield, Clock, 
-  CheckCircle, ArrowRight, Phone, MessageSquare, 
-  Map as MapIcon, Navigation, Info, ChevronRight,
-  User, IndianRupee, Star, Plus, Loader2, Send
+  Shield, Clock, 
+  CheckCircle, 
+  Map as MapIcon, MessageSquare, 
+  Navigation, Info, ChevronRight,
+  Loader2, Send, Package
 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { use } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
+import TrackingMap from "@/components/tracking-map";
 import { updateDeliveryStatus, sendMessage } from "@/lib/actions";
 import { useToast } from "@/components/toast-provider";
+import PackagePhotoUpload from "@/components/package-photo-upload";
+import Image from "next/image";
 
-export default function TrackingDetailPage({ params }: { params: { id: string } }) {
-  const [delivery, setDelivery] = useState<any>(null);
+interface TrackingDelivery {
+  id: string;
+  status: string;
+  price: number;
+  pickupOtp: string;
+  deliveryOtp: string;
+  travelerId: string;
+  senderId: string;
+  package: {
+    fromCity: string;
+    toCity: string;
+    description: string;
+    weight: number;
+    imageUrl?: string;
+  };
+  traveler: {
+    id: string;
+    name: string;
+    image?: string;
+    trustScore: number;
+    phone: string;
+  };
+  sender: {
+    id: string;
+    name: string;
+    image?: string;
+    trustScore: number;
+    phone: string;
+  };
+  messages: Array<{
+    id: string;
+    content: string;
+    senderId: string;
+    createdAt: string;
+  }>;
+  pickupImageUrl?: string;
+  deliveryImageUrl?: string;
+}
+
+export default function TrackingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const { data: session } = useSession();
+  const [delivery, setDelivery] = useState<TrackingDelivery | null>(null); 
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"map" | "chat" | "details">("map");
   const [otpInput, setOtpInput] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [statusImageUrl, setStatusImageUrl] = useState("");
   const { toast } = useToast();
+
+  const currentUserId = session?.user?.id;
+  const isTraveler = delivery && currentUserId === delivery.travelerId;
+  const isSender = delivery && currentUserId === delivery.senderId;
 
   const fetchDelivery = async () => {
     try {
-      const res = await fetch(`/api/deliveries/${params.id}`);
-      if (!res.ok) throw new Error("Failed to fetch");
+      const res = await fetch(`/api/deliveries/${id}`);
       const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.details || data.error || "Failed to load tracking data");
+      }
+      
       setDelivery(data);
     } catch (err) {
-      console.error(err);
-      toast("Error loading delivery details", "error");
+      console.error("Tracking Fetch Error:", err);
+      const errorMessage = err instanceof Error ? err.message : "Error loading delivery details";
+      toast(errorMessage, "error");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    setMounted(true);
     fetchDelivery();
     // Poll for status updates
     const timer = setInterval(fetchDelivery, 5000);
     return () => clearInterval(timer);
-  }, [params.id]);
+  }, [id]);
 
   const handleUpdateStatus = async (status: string) => {
     try {
       setIsSending(true);
-      await updateDeliveryStatus(params.id, status, otpInput);
+      await updateDeliveryStatus(id, status, otpInput, statusImageUrl);
       toast(`✅ Status updated to ${status}!`, "success");
       setOtpInput("");
+      setStatusImageUrl("");
       fetchDelivery();
-    } catch (err: any) {
-      toast(err.message, "error");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      toast(errorMessage, "error");
     } finally {
       setIsSending(false);
     }
   };
 
   const handleSendMessage = async () => {
-    if (!messageInput.trim()) return;
+    if (!messageInput.trim() || !delivery || !currentUserId) return;
     try {
       setIsSending(true);
-      const receiverId = delivery.travelerId === delivery.traveler.id ? delivery.sender.id : delivery.traveler.id;
-      await sendMessage(params.id, messageInput, receiverId);
+      // If current user is traveler, send to sender. Else send to traveler.
+      const receiverId = isTraveler ? delivery.senderId : delivery.travelerId;
+      await sendMessage(id, messageInput, receiverId);
       setMessageInput("");
       fetchDelivery();
-    } catch (err: any) {
-      toast("Failed to send message", "error");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to send message";
+      toast(errorMessage, "error");
     } finally {
       setIsSending(false);
     }
@@ -111,7 +174,7 @@ export default function TrackingDetailPage({ params }: { params: { id: string } 
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
             <Link href="/dashboard" className="hover:text-teal-600 underline-offset-4 hover:underline">Dashboard</Link>
             <ChevronRight className="h-3 w-3" />
-            <span className="font-bold text-teal-600">Track #{delivery.id.slice(-6)}</span>
+            <span className="font-bold text-teal-600">Track #{id.slice(-6)}</span>
           </div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Navigation className="h-8 w-8 text-teal-600 animate-pulse" />
@@ -151,25 +214,15 @@ export default function TrackingDetailPage({ params }: { params: { id: string } 
             </button>
           </div>
 
-          {/* Map Simulation */}
+          {/* Real Google Map Tracking */}
           {activeTab === "map" && (
-            <Card className="border-0 shadow-2xl overflow-hidden relative min-h-[450px]">
-              <div className="absolute inset-0 bg-[#f8f9fa] dark:bg-[#1a1c1e] bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=2074&auto=format&fit=crop')] bg-cover bg-center opacity-40 grayscale" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-white/20 dark:bg-black/20 backdrop-blur-sm">
-                <p className="text-lg font-bold text-teal-800 dark:text-teal-200 mb-2">{delivery.package.fromCity} → {delivery.package.toCity}</p>
-                <Badge variant="secondary" className="mb-4">In Transit</Badge>
-                <div className="w-full max-w-sm h-1 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden relative">
-                   <motion.div 
-                     className="h-full bg-teal-500" 
-                     initial={{ width: 0 }}
-                     animate={{ width: `${progress}%` }}
-                     transition={{ duration: 1 }}
-                   />
-                   <div className="absolute top-1/2 left-[50%] -translate-y-1/2 -translate-x-1/2 h-4 w-4 bg-white border-2 border-teal-600 rounded-full shadow-lg" />
-                </div>
-                <p className="text-xs text-gray-500 mt-4">Simulated GPS Tracking Active</p>
-              </div>
-            </Card>
+            <div className="h-[450px] w-full">
+              <TrackingMap 
+                fromCity={delivery.package.fromCity}
+                toCity={delivery.package.toCity}
+                progress={progress}
+              />
+            </div>
           )}
 
           {/* Real Chat */}
@@ -191,14 +244,19 @@ export default function TrackingDetailPage({ params }: { params: { id: string } 
               </div>
               
               <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-gray-950/50">
-                {delivery.messages.map((msg: any) => (
-                   <div key={msg.id} className={`flex ${msg.senderId === delivery.traveler.id ? "justify-start" : "justify-end"}`}>
-                     <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm border ${msg.senderId === delivery.traveler.id ? "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-800 rounded-tl-none" : "bg-teal-600 text-white border-teal-500 rounded-tr-none"}`}>
-                       <p className="text-sm">{msg.content}</p>
-                       <p className={`text-[10px] mt-2 ${msg.senderId === delivery.traveler.id ? "text-gray-400" : "text-teal-100"}`}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                     </div>
-                   </div>
-                ))}
+                {delivery.messages.map((msg: { id: string; senderId: string; content: string; createdAt: string }) => {
+                  const isMe = msg.senderId === currentUserId;
+                  return (
+                    <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm border ${!isMe ? "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-800 rounded-tl-none" : "bg-teal-600 text-white border-teal-500 rounded-tr-none"}`}>
+                        <p className="text-sm">{msg.content}</p>
+                        <p className={`text-[10px] mt-2 ${!isMe ? "text-gray-400" : "text-teal-100"}`}>
+                          {mounted ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "..."}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="p-4 border-t dark:border-gray-800 flex gap-2">
@@ -206,8 +264,8 @@ export default function TrackingDetailPage({ params }: { params: { id: string } 
                   placeholder="Type a message..." 
                   className="rounded-xl" 
                   value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMessageInput(e.target.value)}
+                  onKeyPress={(e: React.KeyboardEvent) => e.key === "Enter" && handleSendMessage()}
                 />
                 <Button size="icon" className="rounded-xl flex-shrink-0" onClick={handleSendMessage} disabled={isSending}>
                   {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-5 w-5" />}
@@ -216,48 +274,94 @@ export default function TrackingDetailPage({ params }: { params: { id: string } 
             </Card>
           )}
 
-          {/* Detailed Info */}
           {activeTab === "details" && (
-            <Card className="border-0 shadow-xl p-8">
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <h3 className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-3">Shipment Progress</h3>
-                  <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200 dark:before:bg-gray-800">
-                    {["PENDING", "ACCEPTED", "PICKED_UP", "IN_TRANSIT", "DELIVERED"].map((step, i) => {
-                      const isActive = delivery.status === step;
-                      const isCompleted = progress > (i * 20 + 20);
-                      return (
-                        <div key={i} className="relative">
-                          <div className={`absolute -left-8 top-1 h-6 w-6 rounded-full border-4 border-white dark:border-gray-900 z-10 flex items-center justify-center ${
-                            isCompleted ? "bg-teal-500" : isActive ? "bg-orange-500 animate-pulse" : "bg-gray-300 dark:bg-gray-700"
-                          }`}>
-                            {isCompleted && <CheckCircle className="h-3 w-3 text-white" />}
-                          </div>
-                          <div>
-                            <p className={`text-sm font-bold ${!isActive && !isCompleted ? "text-gray-400" : ""}`}>{step.replace("_", " ")}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="space-y-6">
-                  <h3 className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-3">Order Specs</h3>
-                  <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-500">Weight</span>
-                      <span className="text-xs font-bold">{delivery.package.weight} kg</span>
+            <Card className="border-0 shadow-xl overflow-hidden p-6 space-y-8">
+              <div>
+                <h3 className="text-xl font-black mb-4 flex items-center gap-2 text-teal-700">
+                  <Package className="h-5 w-5" />
+                  Package Manifest
+                </h3>
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Description</p>
+                      <p className="text-sm font-semibold">{delivery.package.description}</p>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-500">Price</span>
-                      <span className="text-xs font-bold text-teal-600">₹{delivery.price}</span>
-                    </div>
-                    <div className="pt-2 border-t border-dashed border-gray-300 dark:border-gray-700">
-                      <p className="text-[10px] text-gray-500 italic">&ldquo;{delivery.package.description}&rdquo;</p>
+                    <div className="flex gap-4">
+                      <div className="flex-1 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Weight</p>
+                        <p className="text-sm font-semibold">{delivery.package.weight} kg</p>
+                      </div>
+                      <div className="flex-1 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Route</p>
+                        <p className="text-sm font-semibold text-teal-600">{delivery.package.fromCity} ➔ {delivery.package.toCity}</p>
+                      </div>
                     </div>
                   </div>
+                  
+                  {delivery.package.imageUrl && (
+                    <div className="relative aspect-square md:aspect-auto h-48 rounded-2xl overflow-hidden shadow-lg border-2 border-gray-100 dark:border-gray-800">
+                      <Image 
+                        src={delivery.package.imageUrl} 
+                        alt="Initial Package Proof" 
+                        fill 
+                        className="object-cover"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-md p-2 text-center">
+                        <p className="text-[10px] font-black text-white uppercase tracking-widest">Posted Photo</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {(delivery.pickupImageUrl || delivery.deliveryImageUrl) && (
+                <div className="pt-8 border-t border-gray-100 dark:border-gray-800">
+                  <h3 className="text-xl font-black mb-6 flex items-center gap-2 text-orange-600">
+                    <Shield className="h-5 w-5" />
+                    Chain of Custody
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {delivery.pickupImageUrl ? (
+                      <div className="relative aspect-square rounded-2xl overflow-hidden shadow-lg border-2 border-teal-500/20">
+                        <Image 
+                          src={delivery.pickupImageUrl} 
+                          alt="Pickup Proof" 
+                          fill 
+                          className="object-cover"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-teal-600/90 backdrop-blur-md p-2 text-center text-white">
+                          <p className="text-[10px] font-black uppercase tracking-widest">Pickup Verified</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center p-4 text-center">
+                        <Clock className="h-6 w-6 text-gray-300 mb-2" />
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Awaiting Pickup Proof</p>
+                      </div>
+                    )}
+
+                    {delivery.deliveryImageUrl ? (
+                      <div className="relative aspect-square rounded-2xl overflow-hidden shadow-lg border-2 border-green-500/20">
+                        <Image 
+                          src={delivery.deliveryImageUrl} 
+                          alt="Delivery Proof" 
+                          fill 
+                          className="object-cover"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-green-600/90 backdrop-blur-md p-2 text-center text-white">
+                          <p className="text-[10px] font-black uppercase tracking-widest">Delivery Confirmed</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center p-4 text-center">
+                        <Clock className="h-6 w-6 text-gray-300 mb-2" />
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Awaiting Delivery Proof</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </Card>
           )}
         </div>
@@ -274,13 +378,13 @@ export default function TrackingDetailPage({ params }: { params: { id: string } 
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-bold">₹{delivery.price}</p>
-                  <p className="text-[10px] uppercase tracking-wider text-teal-100">Earnings</p>
+                  <p className="text-[10px] uppercase tracking-wider text-teal-100">{isTraveler ? "Earnings" : "Cost"}</p>
                 </div>
               </div>
               <Progress value={progress} className="h-2 mt-4 bg-teal-800/50" />
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
-              {/* Traveler Status Controls */}
+              {/* Security Controls */}
               <div className="pt-2">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold flex items-center gap-2">
@@ -289,40 +393,101 @@ export default function TrackingDetailPage({ params }: { params: { id: string } 
                   </h3>
                 </div>
                 
-                {delivery.status === "ACCEPTED" && (
-                  <div className="space-y-3">
-                    <p className="text-xs text-gray-500">Provide Pickup OTP to traveler to start delivery.</p>
-                    <div className="p-4 rounded-xl bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-800/30 text-center">
-                       <p className="text-xs text-teal-600 mb-1">PICKUP OTP</p>
-                       <p className="text-2xl font-black tracking-[0.5em] text-teal-700">{delivery.pickupOtp}</p>
-                    </div>
+                {/* SENDER VIEW: Show OTPs to give to traveler */}
+                {isSender && (
+                  <div className="space-y-4">
+                    {delivery.status === "ACCEPTED" && (
+                      <div className="space-y-3">
+                        <p className="text-xs text-gray-500">Give this OTP to the traveler when they pick up the package.</p>
+                        <div className="p-4 rounded-xl bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-800/30 text-center">
+                           <p className="text-xs text-teal-600 mb-1">PICKUP OTP</p>
+                           <p className="text-2xl font-black tracking-[0.5em] text-teal-700">{delivery.pickupOtp}</p>
+                        </div>
+                      </div>
+                    )}
+                    {(delivery.status === "PICKED_UP" || delivery.status === "IN_TRANSIT") && (
+                      <div className="space-y-3">
+                        <p className="text-xs text-gray-500">Give this OTP to the traveler only when the package is delivered.</p>
+                        <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/30 text-center">
+                           <p className="text-xs text-orange-600 mb-1">DELIVERY OTP</p>
+                           <p className="text-2xl font-black tracking-[0.5em] text-orange-700">{delivery.deliveryOtp}</p>
+                        </div>
+                      </div>
+                    )}
+                    {delivery.status === "PENDING" && (
+                       <p className="text-xs text-gray-400 italic">Waiting for traveler to accept...</p>
+                    )}
                   </div>
                 )}
 
-                {delivery.status === "ACCEPTED" && (
-                  <div className="space-y-3 pt-4 border-t dark:border-gray-800 mt-4">
-                    <p className="text-xs font-bold uppercase text-gray-400">Traveler Controls</p>
-                    <Input 
-                      placeholder="Enter Pickup OTP" 
-                      value={otpInput} 
-                      onChange={(e) => setOtpInput(e.target.value)} 
-                    />
-                    <Button 
-                      className="w-full bg-teal-600 hover:bg-teal-700 h-10" 
-                      onClick={() => handleUpdateStatus("PICKED_UP")}
-                      disabled={isSending}
-                    >
-                      {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Pickup & Start"}
-                    </Button>
-                  </div>
-                )}
+                {/* TRAVELER VIEW: Show inputs to enter OTPs */}
+                {isTraveler && (
+                  <div className="space-y-4">
+                    {delivery.status === "ACCEPTED" && (
+                      <div className="space-y-3">
+                        <p className="text-xs text-gray-500">Enter the pickup OTP provided by the sender.</p>
+                        <Input 
+                          placeholder="Enter Pickup OTP" 
+                          value={otpInput} 
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtpInput(e.target.value)} 
+                        />
+                        <div className="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                          <p className="text-xs font-bold mb-3 uppercase tracking-wider text-gray-400">Pickup Photo Proof</p>
+                          <PackagePhotoUpload 
+                            value={statusImageUrl} 
+                            onChange={(url) => setStatusImageUrl(url)}
+                            onRemove={() => setStatusImageUrl("")}
+                          />
+                        </div>
+                        <Button 
+                          className="w-full bg-teal-600 hover:bg-teal-700 h-12 rounded-xl font-black gap-2 shadow-lg shadow-teal-500/20" 
+                          onClick={() => handleUpdateStatus("PICKED_UP")}
+                          disabled={isSending || !statusImageUrl}
+                        >
+                          {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Pickup & Start"}
+                        </Button>
+                      </div>
+                    )}
 
-                {(delivery.status === "PICKED_UP" || delivery.status === "IN_TRANSIT") && (
-                   <div className="space-y-3">
-                      <Button className="w-full bg-orange-600 h-10" onClick={() => handleUpdateStatus("IN_TRANSIT")}>Mark as In Transit</Button>
-                      <Input placeholder="Enter Delivery OTP from Sender" value={otpInput} onChange={(e) => setOtpInput(e.target.value)} />
-                      <Button className="w-full bg-green-600 h-10" onClick={() => handleUpdateStatus("DELIVERED")}>Complete Delivery</Button>
-                   </div>
+                    {delivery.status === "PICKED_UP" && (
+                      <div className="space-y-3">
+                         <p className="text-xs text-gray-500">You have picked up the package. Start transit when ready.</p>
+                         <Button 
+                          className="w-full bg-orange-600 hover:bg-orange-700 h-10" 
+                          onClick={() => handleUpdateStatus("IN_TRANSIT")}
+                          disabled={isSending}
+                        >
+                          Mark as In Transit
+                        </Button>
+                      </div>
+                    )}
+
+                    {delivery.status === "IN_TRANSIT" && (
+                       <div className="space-y-3">
+                          <p className="text-xs text-gray-500">Destination reached? Enter delivery OTP from recipient.</p>
+                          <Input 
+                            placeholder="Enter Delivery OTP" 
+                            value={otpInput} 
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtpInput(e.target.value)} 
+                          />
+                          <div className="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                            <p className="text-xs font-bold mb-3 uppercase tracking-wider text-gray-400">Delivery Photo Proof</p>
+                            <PackagePhotoUpload 
+                              value={statusImageUrl} 
+                              onChange={(url) => setStatusImageUrl(url)}
+                              onRemove={() => setStatusImageUrl("")}
+                            />
+                          </div>
+                          <Button 
+                            className="w-full bg-green-600 hover:bg-green-700 h-12 rounded-xl font-black gap-2 shadow-lg shadow-green-500/20" 
+                            onClick={() => handleUpdateStatus("DELIVERED")}
+                            disabled={isSending || !statusImageUrl}
+                          >
+                            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Complete Delivery"}
+                          </Button>
+                       </div>
+                    )}
+                  </div>
                 )}
 
                 {delivery.status === "DELIVERED" && (

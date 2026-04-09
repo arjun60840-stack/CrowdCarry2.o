@@ -1,16 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { 
-  Shield, Star, Package, IndianRupee, MapPin, 
-  Clock, TrendingUp, Calendar, ArrowRight,
-  TrendingUp as Navigation, Train, Users, Zap, ChevronRight,
-  CheckCircle, LucideIcon
+  Shield, Star, IndianRupee, MapPin, 
+  ArrowRight, Zap, ChevronRight,
+  CheckCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default function LandingPage() {
@@ -32,7 +29,7 @@ export default function LandingPage() {
               transition={{ duration: 0.6 }}
             >
               <Badge variant="outline" className="mb-6 py-1.5 px-4 rounded-full border-teal-200 bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400 font-bold tracking-wide uppercase text-xs">
-                ✨ India's First Peer-to-Peer Logistics Marketplace
+                ✨ India&apos;s First Peer-to-Peer Logistics Marketplace
               </Badge>
 
               <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black leading-tight tracking-tight">

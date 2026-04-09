@@ -14,11 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CITIES } from "@/lib/utils";
+import PackagePhotoUpload from "@/components/package-photo-upload";
 
 export default function NewPackagePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [urgency, setUrgency] = useState("MEDIUM");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,8 +34,9 @@ export default function NewPackagePage() {
         toCity: formData.get("toCity"),
         weight: formData.get("weight"),
         preferredDate: formData.get("preferredDate"),
-        urgency: formData.get("urgency") || "MEDIUM",
+        urgency: urgency, // Use state instead of raw formData
         description: formData.get("description"),
+        imageUrl: imageUrl || null,
       };
 
       const res = await fetch("/api/packages", {
@@ -99,6 +103,15 @@ export default function NewPackagePage() {
             <CardDescription>Enter details about the item you want to send</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
+            <div className="mb-6 p-4 bg-gray-50/50 dark:bg-gray-900/20 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800">
+              <label className="text-sm font-bold mb-2 block text-center uppercase tracking-wider text-gray-400">Package Visualization</label>
+              <PackagePhotoUpload 
+                value={imageUrl} 
+                onChange={(url) => setImageUrl(url)}
+                onRemove={() => setImageUrl("")}
+              />
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -143,11 +156,17 @@ export default function NewPackagePage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Urgency Level</label>
                 <div className="grid grid-cols-4 gap-2">
+                  <input type="hidden" name="urgency" value={urgency} />
                   {["LOW", "MEDIUM", "HIGH", "EXPRESS"].map((level) => (
                     <button
                       key={level}
                       type="button"
-                      className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-semibold hover:border-orange-500 hover:text-orange-600 transition-all focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                      onClick={() => setUrgency(level)}
+                      className={`px-3 py-2 rounded-lg border text-xs font-semibold transition-all focus:ring-2 focus:ring-orange-500 focus:outline-none ${
+                        urgency === level 
+                        ? "bg-orange-500 border-orange-600 text-white" 
+                        : "border-gray-200 dark:border-gray-700 hover:border-orange-500 hover:text-orange-600"
+                      }`}
                     >
                       {level}
                     </button>

@@ -114,7 +114,7 @@ async function main() {
     },
   });
 
-  const trip2 = await prisma.trip.create({
+  await prisma.trip.create({
     data: {
       userId: traveler2.id,
       fromCity: "Jaipur",
@@ -129,7 +129,7 @@ async function main() {
     },
   });
 
-  const trip3 = await prisma.trip.create({
+  await prisma.trip.create({
     data: {
       userId: traveler1.id,
       fromCity: "Delhi",
@@ -144,7 +144,7 @@ async function main() {
     },
   });
 
-  const trip4 = await prisma.trip.create({
+  await prisma.trip.create({
     data: {
       userId: traveler3.id,
       fromCity: "Delhi",
@@ -174,7 +174,7 @@ async function main() {
     },
   });
 
-  const pkg2 = await prisma.package.create({
+  await prisma.package.create({
     data: {
       userId: sender2.id,
       fromCity: "Delhi",
@@ -188,7 +188,7 @@ async function main() {
     },
   });
 
-  const pkg3 = await prisma.package.create({
+  await prisma.package.create({
     data: {
       userId: sender1.id,
       fromCity: "Jaipur",

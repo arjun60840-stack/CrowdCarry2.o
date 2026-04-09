@@ -17,8 +17,23 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/toast-provider";
 import { createDeliveryRequest } from "@/lib/actions";
 
+interface MarketplacePackage {
+  id: string;
+  fromCity: string;
+  toCity: string;
+  weight: number;
+  description: string;
+  preferredDate: string;
+  urgency: string;
+  user: {
+    name: string;
+    trustScore: number;
+    image?: string;
+  };
+}
+
 export default function PackagesPage() {
-  const [packages, setPackages] = useState<any[]>([]);
+  const [packages, setPackages] = useState<MarketplacePackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
@@ -43,7 +58,7 @@ export default function PackagesPage() {
     fetchPackages();
   }, []);
 
-  const handleAccept = async (pkg: any) => {
+  const handleAccept = async (pkg: MarketplacePackage) => {
     if (acceptedIds.includes(pkg.id)) return;
     setLoadingId(pkg.id);
     try {

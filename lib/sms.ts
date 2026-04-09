@@ -39,9 +39,10 @@ export async function sendSMS({ to, body }: SMSPayload) {
       
       console.log("[SMS FAST2SMS] Successfully sent!");
       return { success: true };
-    } catch (error: any) {
-      console.error("Fast2SMS Exception:", error.message);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Fast2SMS Exception:", errorMessage);
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -75,9 +76,10 @@ export async function sendSMS({ to, body }: SMSPayload) {
       }
 
       return { success: true };
-    } catch (error: any) {
-      console.error("Twilio SMS send failed:", error.message);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Twilio SMS send failed:", errorMessage);
+      return { success: false, error: errorMessage };
     }
   }
 

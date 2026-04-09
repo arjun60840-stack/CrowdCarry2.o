@@ -3,18 +3,30 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
-  Shield, Star, Package, IndianRupee, MapPin, 
-  Clock, TrendingUp, Calendar, ArrowRight,
-  Navigation, Train
+  Shield, Star, Package, IndianRupee, 
+  Clock, TrendingUp, Calendar,
+  Navigation
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/toast-provider";
 
+interface UserProfile {
+  name: string;
+  phone?: string;
+  city?: string;
+}
+
+interface UserStats {
+  totalEarnings: number;
+  deliveries: number;
+  trips: number;
+}
+
 export default function ProfilePage() {
-  const [user, setUser] = useState<any>(null);
-  const [stats, setStats] = useState<any>({ totalEarnings: 0, deliveries: 0, trips: 0 });
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [stats, setStats] = useState<UserStats>({ totalEarnings: 0, deliveries: 0, trips: 0 });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 

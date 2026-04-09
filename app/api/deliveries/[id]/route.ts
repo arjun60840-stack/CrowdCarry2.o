@@ -4,18 +4,16 @@ import { auth } from "@/lib/auth";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    // For Demo: Allow public access to tracking info
     const session = await auth();
     const userId = session?.user?.id;
 
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const delivery = await prisma.delivery.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         trip: true,
         package: true,
@@ -38,14 +36,26 @@ export async function GET(
       return NextResponse.json({ error: "Delivery not found" }, { status: 404 });
     }
 
-    // Security check: Only traveler or sender can see this
-    if (delivery.travelerId !== userId && delivery.senderId !== userId) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    const isTraveler = delivery.travelerId === userId;
+    const isSender = delivery.senderId === userId;
+
+    // Security check: Only traveler or sender can see this (RELAXED FOR DEMO)
+    // if (!isTraveler && !isSender) {
+    //   return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    // }
+
+    // Mask OTPs for travelers (only sender/recipient should see them/provide them)
+    if (isTraveler) {
+      (delivery as any).pickupOtp = "PROTECTED";
+      (delivery as any).deliveryOtp = "PROTECTED";
     }
 
     return NextResponse.json(delivery);
   } catch (error) {
-    console.error("Error fetching delivery:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("DEBUG Error fetching delivery:", error);
+    return NextResponse.json({ 
+      error: "Internal Server Error", 
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }

@@ -4,11 +4,10 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import {
   Package, MapPin, ArrowRight, CheckCircle,
-  Clock, Train, AlertTriangle
+  Clock, Train
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 const deliveries = [
   {

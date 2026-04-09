@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { calculateMatchScore } from "./utils";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -54,7 +53,7 @@ export async function matchPackageWithTrips(packageId: string) {
 /**
  * Update delivery status with verification (OTP check)
  */
-export async function updateDeliveryStatus(deliveryId: string, status: string, otp?: string) {
+export async function updateDeliveryStatus(deliveryId: string, status: string, otp?: string, imageUrl?: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -79,7 +78,9 @@ export async function updateDeliveryStatus(deliveryId: string, status: string, o
       status,
       pickedUpAt: status === "PICKED_UP" ? new Date() : undefined,
       deliveredAt: status === "DELIVERED" ? new Date() : undefined,
-    },
+      pickupImageUrl: status === "PICKED_UP" ? imageUrl : undefined,
+      deliveryImageUrl: status === "DELIVERED" ? imageUrl : undefined,
+    } as any,
   });
 
   revalidatePath(`/tracking/${deliveryId}`);
@@ -146,7 +147,8 @@ export async function postPackage(formData: FormData) {
       description,
       preferredDate,
       estimatedCost,
-    },
+      imageUrl: formData.get("imageUrl") as string || null,
+    } as any,
   });
 
   revalidatePath("/dashboard");

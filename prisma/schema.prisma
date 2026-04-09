@@ -75,7 +75,7 @@ model Session {
 
 model VerificationToken {
   identifier String
-  token      String   @unique
+  token      String
   expires    DateTime
 
   @@unique([identifier, token])
@@ -111,6 +111,7 @@ model Package {
   preferredDate DateTime
   status        String        @default("POSTED")
   estimatedCost Float?
+  imageUrl      String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -131,6 +132,8 @@ model Delivery {
   price        Float
   pickedUpAt   DateTime?
   deliveredAt  DateTime?
+  pickupImageUrl   String?
+  deliveryImageUrl String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 

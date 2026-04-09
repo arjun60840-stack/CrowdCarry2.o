@@ -13,6 +13,42 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/toast-provider";
+import { useCallback } from "react";
+import Image from "next/image";
+
+interface DashboardPackage {
+  id: string;
+  description: string;
+  weight: number;
+  fromCity: string;
+  toCity: string;
+  imageUrl?: string;
+}
+
+interface DashboardTrip {
+  id: string;
+  fromCity: string;
+  toCity: string;
+  departureDate: string;
+  departureTime: string;
+  status: string;
+  pricePerKg: number;
+}
+
+interface DashboardDelivery {
+  id: string;
+  status: string;
+  price: number;
+  createdAt: string;
+  package?: {
+    description: string;
+    imageUrl?: string;
+  };
+  trip?: {
+    fromCity: string;
+    toCity: string;
+  };
+}
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300 border-yellow-200",
@@ -24,13 +60,13 @@ const statusColors: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const [packages, setPackages] = useState<any[]>([]);
-  const [trips, setTrips] = useState<any[]>([]);
-  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [packages, setPackages] = useState<DashboardPackage[]>([]);
+  const [trips, setTrips] = useState<DashboardTrip[]>([]);
+  const [deliveries, setDeliveries] = useState<DashboardDelivery[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [pkgRes, tripRes, delRes] = await Promise.all([
         fetch("/api/packages"),
@@ -38,11 +74,9 @@ export default function DashboardPage() {
         fetch("/api/deliveries")
       ]);
       
-      const [pkgData, tripData, delData] = await Promise.all([
-        pkgRes.json(),
-        tripRes.json(),
-        delRes.json()
-      ]);
+      const pkgData = await pkgRes.json();
+      const tripData = await tripRes.json();
+      const delData = await delRes.json();
       
       setPackages(pkgData || []);
       setTrips(tripData || []);
@@ -52,14 +86,14 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
     // Auto-refresh every 10 seconds for real-time feel
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchData]);
 
   const totalEarnings = deliveries
     .filter(d => d.status === "DELIVERED")
@@ -193,34 +227,46 @@ export default function DashboardPage() {
   );
 }
 
-function DeliveryCard({ del }: { del: any }) {
+function DeliveryCard({ del }: { del: DashboardDelivery }) {
   return (
     <Link href={`/tracking/${del.id}`}>
-      <Card className="rounded-3xl border-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all group p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Badge variant="outline" className={`${statusColors[del.status]} border font-black text-[10px] px-3`}>
-                {del.status.replace("_", " ")}
-              </Badge>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Order CC#{del.id.slice(-6)}</span>
+      <Card className="rounded-3xl border-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all group overflow-hidden">
+        <div className="flex flex-col md:flex-row gap-0">
+          {del.package?.imageUrl && (
+            <div className="relative w-full md:w-32 h-32 md:h-auto shrink-0 border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-800">
+               <Image 
+                 src={del.package.imageUrl} 
+                 alt="Package" 
+                 fill 
+                 className="object-cover group-hover:scale-110 transition-transform duration-500"
+               />
             </div>
-            <div className="flex items-center gap-3 font-black text-xl">
-              <MapPin className="h-5 w-5 text-teal-600" />
-              {del.trip?.fromCity}
-              <ArrowRight className="h-5 w-5 text-gray-400" />
-              {del.trip?.toCity}
+          )}
+          <div className="flex flex-1 flex-col md:flex-row md:items-center justify-between gap-4 p-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className={`${statusColors[del.status]} border font-black text-[10px] px-3`}>
+                  {del.status.replace("_", " ")}
+                </Badge>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Order CC#{del.id.slice(-6)}</span>
+              </div>
+              <div className="flex items-center gap-3 font-black text-xl">
+                <MapPin className="h-5 w-5 text-teal-600" />
+                {del.trip?.fromCity}
+                <ArrowRight className="h-5 w-5 text-gray-400" />
+                {del.trip?.toCity}
+              </div>
+              <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
+                <span className="flex items-center gap-1.5"><Package className="h-3.5 w-3.5 text-orange-500" /> {del.package?.description.slice(0,25)}...</span>
+                <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {new Date(del.createdAt).toLocaleDateString()}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
-               <span className="flex items-center gap-1.5"><Package className="h-3.5 w-3.5 text-orange-500" /> {del.package?.description.slice(0,25)}...</span>
-               <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {new Date(del.createdAt).toLocaleDateString()}</span>
+            <div className="flex items-center justify-between md:flex-col md:items-end gap-2">
+              <p className="text-2xl font-black text-teal-700">₹{del.price}</p>
+              <Button size="sm" className="rounded-xl h-10 px-6 font-black text-xs gap-2">
+                Track <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-          </div>
-          <div className="flex items-center justify-between md:flex-col md:items-end gap-2">
-            <p className="text-2xl font-black text-teal-700">₹{del.price}</p>
-            <Button size="sm" className="rounded-xl h-10 px-6 font-black text-xs gap-2">
-              Track <ChevronRight className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </Card>
@@ -228,7 +274,7 @@ function DeliveryCard({ del }: { del: any }) {
   );
 }
 
-function EmptyState({ icon: Icon, label, href, buttonText }: any) {
+function EmptyState({ icon: Icon, label, href, buttonText }: { icon: any; label: string; href: string; buttonText: string }) {
   return (
     <Card className="p-16 text-center border-dashed border-2 rounded-[2.5rem] bg-gray-50/30 dark:bg-gray-900/20">
       <div className="h-16 w-16 bg-white dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">

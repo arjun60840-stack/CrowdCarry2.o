@@ -4,25 +4,41 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { 
-  Train, Package, MapPin, IndianRupee, Star,
-  TrendingUp, Clock, ArrowRight, Shield,
-  Users, Plus, CheckCircle, Navigation,
-  ChevronRight, Calendar, Loader2, Zap,
-  Search, Filter, X, Weight, Send
+  Train, Package, MapPin, Star,
+  Clock, ArrowRight,
+  Plus, CheckCircle,
+  Calendar, Loader2, Zap,
+  X, Weight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/toast-provider";
 import { createDeliveryRequest } from "@/lib/actions";
 
+interface Trip {
+  id: string;
+  fromCity: string;
+  toCity: string;
+  departureDate: string;
+  departureTime: string;
+  transportMode: string;
+  pricePerKg: number;
+  availableWeight: number;
+  user: {
+    nameCode?: string;
+    name: string;
+    trustScore: number;
+  };
+}
+
 export default function TripsPage() {
-  const [trips, setTrips] = useState<any[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
-  const [requestModal, setRequestModal] = useState<any | null>(null);
+  const [requestModal, setRequestModal] = useState<Trip | null>(null);
   const [requestedIds, setRequestedIds] = useState<string[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   
@@ -71,8 +87,9 @@ export default function TripsPage() {
       
       setRequestedIds((prev) => [...prev, requestModal.id]);
       setRequestModal(null);
-    } catch (err: any) {
-      toast(err.message || "Failed to send request", "error");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to send request";
+      toast(errorMessage, "error");
     } finally {
       setLoadingId(null);
     }
@@ -187,14 +204,14 @@ export default function TripsPage() {
       >
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-5xl font-black tracking-tight text-white">Marketplace</h1>
-            <div className="flex items-center gap-1.5 text-[10px] font-black text-teal-400 uppercase tracking-widest animate-pulse px-3 py-1 rounded-full bg-teal-950/40 border border-teal-500/20 mt-2">
+            <h1 className="text-5xl font-black tracking-tight text-gray-900 dark:text-white">Marketplace</h1>
+            <div className="flex items-center gap-1.5 text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest animate-pulse px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-500/20 mt-2">
               <div className="h-1.5 w-1.5 rounded-full bg-teal-500 shadow-[0_0_8px_rgba(20,184,166,0.8)]" />
               Marketplace Live
             </div>
           </div>
-          <p className="text-teal-100 font-bold flex items-center gap-2">
-            <Zap className="h-4 w-4" />
+          <p className="text-gray-500 dark:text-teal-100 font-bold flex items-center gap-2">
+            <Zap className="h-4 w-4 text-teal-600" />
             Discover {trips.length} active routes for your package
           </p>
         </div>

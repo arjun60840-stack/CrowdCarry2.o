@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     }
 
     const data = await req.json();
-    const { fromCity, toCity, weight, description, urgency, preferredDate } = data;
+    const { fromCity, toCity, weight, description, urgency, preferredDate, imageUrl } = data;
 
     if (!fromCity || !toCity || !weight || !description) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -54,8 +54,9 @@ export async function POST(req: Request) {
         description,
         urgency: urgency || "MEDIUM",
         preferredDate: new Date(preferredDate),
+        imageUrl,
         status: "POSTED",
-      },
+      } as any,
     });
 
     return NextResponse.json(newPackage, { status: 201 });

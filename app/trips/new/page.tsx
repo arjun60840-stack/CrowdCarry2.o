@@ -7,7 +7,7 @@ import Link from "next/link";
 import { 
   Train, MapPin, Calendar, Clock, Weight, 
   IndianRupee, ArrowRight, CheckCircle, Info,
-  Plus
+  Plus, Bus, Car, Plane
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,6 +20,7 @@ export default function NewTripPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [weight, setWeight] = useState(5);
+  const [transportMode, setTransportMode] = useState("train");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +33,7 @@ export default function NewTripPage() {
         toCity: formData.get("to"),
         departureDate: formData.get("date"),
         departureTime: formData.get("time"),
-        transportMode: formData.get("transport") || "train",
+        transportMode: transportMode, // Use state
         availableWeight: formData.get("availableWeight"),
         pricePerKg: formData.get("pricePerKg"),
         description: formData.get("note"),
@@ -150,19 +151,31 @@ export default function NewTripPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <label className="text-sm font-medium">Transport Mode</label>
-                <select
-                  name="transport"
-                  required
-                  className="flex h-11 w-full rounded-xl border border-gray-300 bg-white/50 px-4 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800/50"
-                >
-                  <option value="">Select transport</option>
-                  <option value="train">Train</option>
-                  <option value="bus">Bus</option>
-                  <option value="car">Car / Cab</option>
-                  <option value="flight">Flight</option>
-                </select>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <input type="hidden" name="transport" value={transportMode} />
+                  {[
+                    { id: "train", label: "Train", icon: Train },
+                    { id: "bus", label: "Bus", icon: Bus },
+                    { id: "car", label: "Car/Cab", icon: Car },
+                    { id: "flight", label: "Flight", icon: Plane },
+                  ].map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setTransportMode(mode.id)}
+                      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                        transportMode === mode.id
+                          ? "border-teal-500 bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-400"
+                          : "border-gray-100 hover:border-teal-200 dark:border-gray-800 dark:hover:border-teal-900"
+                      }`}
+                    >
+                      <mode.icon className={`h-5 w-5 ${transportMode === mode.id ? "text-teal-600" : "text-gray-400"}`} />
+                      <span className="text-xs font-semibold">{mode.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
