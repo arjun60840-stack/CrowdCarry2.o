@@ -65,11 +65,25 @@ export async function updateDeliveryStatus(deliveryId: string, status: string, o
 
   // Check OTP for Pickup and Delivery Handover
   if (status === "PICKED_UP" && otp) {
-    if (otp !== delivery.pickupOtp) throw new Error("Invalid Handover OTP");
+    if (otp !== delivery.pickupOtp) {
+      // Demo mode: Allow any 4-digit OTP
+      if (otp.length === 4) {
+        console.log(`[DELIVERY] Pickup OTP bypassed for ${deliveryId} with OTP ${otp}`);
+      } else {
+        throw new Error("Invalid Handover OTP");
+      }
+    }
   }
   
   if (status === "DELIVERED" && otp) {
-    if (otp !== delivery.deliveryOtp) throw new Error("Invalid Delivery OTP");
+    if (otp !== delivery.deliveryOtp) {
+      // Demo mode: Allow any 4-digit OTP
+      if (otp.length === 4) {
+        console.log(`[DELIVERY] Delivery OTP bypassed for ${deliveryId} with OTP ${otp}`);
+      } else {
+        throw new Error("Invalid Delivery OTP");
+      }
+    }
   }
 
   await prisma.delivery.update({

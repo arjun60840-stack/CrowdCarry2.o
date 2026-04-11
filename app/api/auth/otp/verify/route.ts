@@ -17,6 +17,7 @@ export async function POST(req: Request) {
     if (!token) {
       // Demo mode: Allow any 6-digit OTP if not found in database (for testing)
       if (otp.length === 6) {
+        console.log(`[AUTH] OTP Verification bypassed for ${phone} with OTP ${otp} (Demo Mode)`);
         return NextResponse.json({ success: true, message: "Verified (Demo mode)" });
       }
       return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 401 });

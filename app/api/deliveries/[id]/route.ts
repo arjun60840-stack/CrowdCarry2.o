@@ -46,7 +46,9 @@ export async function GET(
 
     // Mask OTPs for travelers (only sender/recipient should see them/provide them)
     if (isTraveler) {
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       (delivery as any).pickupOtp = "PROTECTED";
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       (delivery as any).deliveryOtp = "PROTECTED";
     }
 

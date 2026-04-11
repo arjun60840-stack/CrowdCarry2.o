@@ -32,12 +32,7 @@ export default function LoginPage() {
       setLoading(true);
       setError("");
       try {
-        if (phone === "1234567890") {
-          setIsDemoMode(true);
-          setStep("otp");
-          setLoading(false);
-          return;
-        }
+        // Always call the API, let the backend decide if it's demo mode
 
         const response = await fetch("/api/auth/otp/send", {
           method: "POST",
@@ -66,11 +61,7 @@ export default function LoginPage() {
       setLoading(true);
       setError("");
       try {
-        if (isDemoMode && otp === "123456") {
-          setStep("role");
-          setLoading(false);
-          return;
-        }
+        // Always verify via API
 
         const response = await fetch("/api/auth/otp/verify", {
           method: "POST",
@@ -198,7 +189,7 @@ export default function LoginPage() {
 
                 <p className="text-center text-xs text-gray-500 dark:text-gray-400">
                   <Lock className="h-3 w-3 inline mr-1" />
-                  Demo mode: 1234567890 | OTP: 123456
+                  Demo mode: Any phone number | OTP: Any 6 digits
                 </p>
               </motion.div>
             )}

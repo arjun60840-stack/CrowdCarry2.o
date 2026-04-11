@@ -22,12 +22,17 @@ export async function POST(req: Request) {
     });
 
     // Send real SMS
+    console.log(`[AUTH] OTP for ${phone}: ${otp}`);
     const res = await sendOTP(phone, otp);
 
     if (!res.success) {
       console.warn("SMS sending failed:", res.error);
-      // For testing, proceed anyway. The OTP will be shown in the server logs.
-      return NextResponse.json({ success: true, message: "OTP logged to server (Demo mode)" });
+      // For testing, always proceed. The OTP is logged above.
+      return NextResponse.json({ 
+        success: true, 
+        message: "OTP sent (Demo mode)", 
+        debugOtp: process.env.NODE_ENV === 'development' ? otp : undefined 
+      });
     }
 
     return NextResponse.json({ success: true, message: "OTP sent successfully" });
