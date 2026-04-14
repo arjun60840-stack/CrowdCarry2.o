@@ -26,7 +26,15 @@ export default function NewPackagePage() {
 
   useEffect(() => {
     if (imageUrl && submitButtonRef.current) {
-      submitButtonRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Add a small delay to ensure the Cloudinary widget has closed
+      // and the DOM has finished updating its height.
+      const timer = setTimeout(() => {
+        submitButtonRef.current?.scrollIntoView({ 
+          behavior: "smooth", 
+          block: "end" 
+        });
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [imageUrl]);
 

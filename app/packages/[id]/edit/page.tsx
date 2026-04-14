@@ -34,7 +34,13 @@ export default function EditPackagePage() {
     // Only scroll if the image URL has changed from empty to something (upload)
     // or if it changed after the initial load.
     if (imageUrl && saveButtonRef.current && !loading) {
-      saveButtonRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      const timer = setTimeout(() => {
+        saveButtonRef.current?.scrollIntoView({ 
+          behavior: "smooth", 
+          block: "end" 
+        });
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [imageUrl, loading]);
 
