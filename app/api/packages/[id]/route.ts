@@ -4,9 +4,10 @@ import { auth } from "@/lib/auth";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     const userId = session?.user?.id;
 
@@ -15,7 +16,7 @@ export async function GET(
     }
 
     const pkg = await prisma.package.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { deliveries: true },
     });
 
@@ -36,9 +37,10 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     const userId = session?.user?.id;
 
@@ -47,7 +49,7 @@ export async function PATCH(
     }
 
     const pkg = await prisma.package.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { deliveries: true },
     });
 
@@ -70,7 +72,7 @@ export async function PATCH(
     const { fromCity, toCity, weight, description, urgency, preferredDate } = data;
 
     const updatedPackage = await prisma.package.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         fromCity,
         toCity,
@@ -90,9 +92,10 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     const userId = session?.user?.id;
 
@@ -101,7 +104,7 @@ export async function DELETE(
     }
 
     const pkg = await prisma.package.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { deliveries: true },
     });
 
@@ -121,7 +124,7 @@ export async function DELETE(
     }
 
     await prisma.package.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Package deleted successfully" });

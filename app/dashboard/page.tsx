@@ -7,7 +7,7 @@ import {
   Train, Package, MapPin, IndianRupee, Star,
   TrendingUp, Clock, ArrowRight, Shield,
   Users, Plus, CheckCircle, Navigation,
-  ChevronRight, Calendar, Loader2, Edit, Trash2
+  ChevronRight, Calendar, Loader2, Edit, Trash2, Weight
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
