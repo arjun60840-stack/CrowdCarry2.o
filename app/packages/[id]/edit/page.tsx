@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -21,6 +21,7 @@ export default function EditPackagePage() {
   const params = useParams();
   const pkgId = params.id as string;
   const { toast } = useToast();
+  const saveButtonRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -28,6 +29,14 @@ export default function EditPackagePage() {
   const [imageUrl, setImageUrl] = useState("");
   const [urgency, setUrgency] = useState("MEDIUM");
   const [initialData, setInitialData] = useState<any>(null);
+
+  useEffect(() => {
+    // Only scroll if the image URL has changed from empty to something (upload)
+    // or if it changed after the initial load.
+    if (imageUrl && saveButtonRef.current && !loading) {
+      saveButtonRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [imageUrl, loading]);
 
   useEffect(() => {
     const fetchPackage = async () => {
@@ -290,13 +299,15 @@ export default function EditPackagePage() {
                 </p>
               </div>
 
-              <Button type="submit" disabled={saving} className="w-full h-12 text-lg gap-2 rounded-xl shadow-xl shadow-teal-500/10">
-                {saving ? (
-                  <><Loader2 className="h-5 w-5 animate-spin" /> Saving...</>
-                ) : (
-                  <><Save className="h-5 w-5" /> Save Changes</>
-                )}
-              </Button>
+              <div ref={saveButtonRef}>
+                <Button type="submit" disabled={saving} className="w-full h-12 text-lg gap-2 rounded-xl shadow-xl shadow-teal-500/10">
+                  {saving ? (
+                    <><Loader2 className="h-5 w-5 animate-spin" /> Saving...</>
+                  ) : (
+                    <><Save className="h-5 w-5" /> Save Changes</>
+                  )}
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -22,6 +22,13 @@ export default function NewPackagePage() {
   const [success, setSuccess] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
   const [urgency, setUrgency] = useState("MEDIUM");
+  const submitButtonRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (imageUrl && submitButtonRef.current) {
+      submitButtonRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [imageUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,10 +245,12 @@ export default function NewPackagePage() {
                 </p>
               </div>
 
-              <Button type="submit" disabled={loading} variant="secondary" className="w-full h-12 text-lg gap-2">
-                {loading ? "Posting..." : "Post Package Request"}
-                <ArrowRight className="h-5 w-5" />
-              </Button>
+              <div ref={submitButtonRef}>
+                <Button type="submit" disabled={loading} variant="secondary" className="w-full h-12 text-lg gap-2">
+                  {loading ? "Posting..." : "Post Package Request"}
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
