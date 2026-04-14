@@ -7,8 +7,9 @@ import {
   Train, Package, MapPin, IndianRupee, Star,
   TrendingUp, Clock, ArrowRight, Shield,
   Users, Plus, CheckCircle, Navigation,
-  ChevronRight, Calendar, Loader2
+  ChevronRight, Calendar, Loader2, Edit, Trash2
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +65,9 @@ export default function DashboardPage() {
   const [trips, setTrips] = useState<DashboardTrip[]>([]);
   const [deliveries, setDeliveries] = useState<DashboardDelivery[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   const fetchData = useCallback(async () => {
     try {
@@ -98,6 +101,42 @@ export default function DashboardPage() {
   const totalEarnings = deliveries
     .filter(d => d.status === "DELIVERED")
     .reduce((acc, d) => acc + d.price, 0);
+
+  const handleDeleteTrip = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this trip?")) return;
+    
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/trips/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete trip");
+      toast("Trip deleted successfully", "success");
+      fetchData();
+    } catch (err) {
+      toast("Error deleting trip", "error");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDeletePackage = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this package request?")) return;
+    
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/packages/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete package");
+      toast("Package deleted successfully", "success");
+      fetchData();
+    } catch (err) {
+      toast("Error deleting package", "error");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
@@ -184,6 +223,54 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* My Packages Section */}
+          <div className="space-y-6 pt-8">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
+               <h2 className="text-lg font-black text-teal-600">My Package Requests ({packages.length})</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {packages.length === 0 ? (
+                <div className="col-span-full py-10 text-center border-2 border-dashed rounded-3xl bg-gray-50/50 dark:bg-gray-900/10">
+                  <p className="text-sm font-bold text-gray-400">You haven&apos;t posted any packages yet.</p>
+                </div>
+              ) : (
+                packages.map((pkg) => (
+                  <Card key={pkg.id} className="rounded-3xl border-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm shadow-md hover:shadow-lg transition-all p-5 group">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="h-10 w-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                        <Package className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 rounded-lg hover:bg-teal-50 hover:text-teal-600"
+                          onClick={() => router.push(`/packages/${pkg.id}/edit`)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-600"
+                          onClick={(e) => handleDeletePackage(e, pkg.id)}
+                          disabled={deletingId === pkg.id}
+                        >
+                          {deletingId === pkg.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="font-black text-sm mb-1">{pkg.fromCity} → {pkg.toCity}</div>
+                    <p className="text-xs text-gray-500 line-clamp-1 mb-2 italic">CC#{pkg.id.slice(-6)}: {pkg.description}</p>
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400">
+                      <Weight className="h-3 w-3" /> {pkg.weight} kg
+                    </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Sidebar */}
@@ -198,18 +285,39 @@ export default function DashboardPage() {
                 <p className="text-sm font-bold text-gray-400 text-center py-8">No trips scheduled.</p>
               ) : (
                 trips.map((trip) => (
-                  <div key={trip.id} className="p-5 rounded-2xl bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:border-teal-500/50 transition-all cursor-pointer group">
+                  <div key={trip.id} className="p-5 rounded-3xl bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:border-teal-500/50 transition-all group">
                     <div className="flex justify-between items-start mb-2">
                        <Badge variant="outline" className={`${statusColors[trip.status] || "bg-gray-100"} border-0 text-[10px] font-black uppercase tracking-widest px-2 py-0.5`}>
                          {trip.status}
                        </Badge>
-                       <p className="text-xs font-black text-teal-700">₹{trip.pricePerKg}/kg</p>
+                       <div className="flex gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 rounded-lg hover:bg-teal-50 hover:text-teal-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => router.push(`/trips/${trip.id}/edit`)}
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 rounded-lg hover:bg-red-50 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => handleDeleteTrip(e, trip.id)}
+                          disabled={deletingId === trip.id}
+                        >
+                          {deletingId === trip.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                        </Button>
+                       </div>
                     </div>
                     <div className="flex items-center gap-2 font-black text-sm mb-1">
                       {trip.fromCity} <ArrowRight className="h-3 w-3 text-gray-400" /> {trip.toCity}
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400">
-                      <Calendar className="h-3 w-3" /> {new Date(trip.departureDate).toLocaleDateString()}
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400">
+                        <Calendar className="h-3 w-3" /> {new Date(trip.departureDate).toLocaleDateString()}
+                      </div>
+                      <p className="text-[10px] font-black text-teal-700">₹{trip.pricePerKg}/kg</p>
                     </div>
                   </div>
                 ))

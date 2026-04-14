@@ -8,8 +8,9 @@ import {
   Clock, ArrowRight,
   Plus, CheckCircle,
   Calendar, Loader2, Zap,
-  X, Weight
+  X, Weight, Edit, Trash2
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ interface Trip {
   transportMode: string;
   pricePerKg: number;
   availableWeight: number;
+  userId: string;
   user: {
     nameCode?: string;
     name: string;
@@ -44,6 +46,10 @@ export default function TripsPage() {
   
   // Package form state
   const [packageWeight, setPackageWeight] = useState("5");
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
+  const router = useRouter();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   
   const { toast } = useToast();
 
@@ -66,6 +72,24 @@ export default function TripsPage() {
     const interval = setInterval(fetchTrips, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleDeleteTrip = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this trip?")) return;
+    
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/trips/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete trip");
+      toast("Trip deleted successfully", "success");
+      setTrips(prev => prev.filter(t => t.id !== id));
+    } catch (err) {
+      toast("Error deleting trip", "error");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleRequest = async () => {
     if (!requestModal) return;
@@ -288,11 +312,34 @@ export default function TripsPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-black text-orange-600">
-                          ₹{trip.pricePerKg}
-                        </p>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">per kg</p>
+                      <div className="text-right flex flex-col items-end gap-2">
+                        {trip.userId === currentUserId && (
+                          <div className="flex gap-1 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 rounded-lg bg-teal-50 dark:bg-teal-900/30 text-teal-600 hover:bg-teal-100"
+                              onClick={() => router.push(`/trips/${trip.id}/edit`)}
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 hover:bg-red-100"
+                              onClick={(e) => handleDeleteTrip(e, trip.id)}
+                              disabled={deletingId === trip.id}
+                            >
+                              {deletingId === trip.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            </Button>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-2xl font-black text-orange-600">
+                            ₹{trip.pricePerKg}
+                          </p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">per kg</p>
+                        </div>
                       </div>
                     </div>
 

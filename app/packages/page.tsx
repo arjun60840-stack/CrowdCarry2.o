@@ -8,8 +8,9 @@ import {
   Package, MapPin, Calendar, Weight, 
   IndianRupee, ArrowRight, Filter, Info, 
   Star, Shield, Clock, Users, Plus,
-  CheckCircle, Loader2
+  CheckCircle, Loader2, Edit, Trash2
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ interface MarketplacePackage {
   description: string;
   preferredDate: string;
   urgency: string;
+  userId: string;
   user: {
     name: string;
     trustScore: number;
@@ -39,8 +41,11 @@ export default function PackagesPage() {
   const [filterTo, setFilterTo] = useState("");
   const [acceptedIds, setAcceptedIds] = useState<string[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
   const { toast } = useToast();
   const router = useRouter();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPackages = async () => {
@@ -57,6 +62,24 @@ export default function PackagesPage() {
     };
     fetchPackages();
   }, []);
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this package request?")) return;
+    
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/packages/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete package");
+      toast("Package deleted successfully", "success");
+      setPackages(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      toast("Error deleting package", "error");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleAccept = async (pkg: MarketplacePackage) => {
     if (acceptedIds.includes(pkg.id)) return;
@@ -170,7 +193,28 @@ export default function PackagesPage() {
               transition={{ delay: i * 0.1 }}
             >
               <Card className={`hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group overflow-hidden border-teal-100/50 dark:border-teal-900/20 ${isAccepted ? "ring-2 ring-teal-500 ring-offset-2" : ""}`}>
-                <div className="absolute top-0 right-0 p-3">
+                <div className="absolute top-0 right-0 p-3 flex gap-2">
+                  {pkg.userId === currentUserId && (
+                    <div className="flex gap-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 rounded-lg bg-teal-50 dark:bg-teal-900/30 text-teal-600 hover:bg-teal-100"
+                        onClick={() => router.push(`/packages/${pkg.id}/edit`)}
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 hover:bg-red-100"
+                        onClick={(e) => handleDelete(e, pkg.id)}
+                        disabled={deletingId === pkg.id}
+                      >
+                        {deletingId === pkg.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
+                  )}
                   <Badge variant={pkg.urgency === "HIGH" || pkg.urgency === "EXPRESS" ? "destructive" : "secondary"}>
                     {pkg.urgency}
                   </Badge>

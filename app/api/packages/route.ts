@@ -18,8 +18,8 @@ export async function GET() {
     }
 
     const packages = await prisma.package.findMany({
-      where: { userId },
       orderBy: { createdAt: "desc" },
+      include: { user: true },
     });
 
     return NextResponse.json(packages);

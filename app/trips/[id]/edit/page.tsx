@@ -1,0 +1,342 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import { 
+  Train, MapPin, Calendar, Clock, Weight, 
+  IndianRupee, ArrowRight, CheckCircle, Info,
+  Bus, Car, Plane, Loader2, Save, Trash2
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { CITIES } from "@/lib/utils";
+import { useToast } from "@/components/toast-provider";
+
+export default function EditTripPage() {
+  const router = useRouter();
+  const params = useParams();
+  const tripId = params.id as string;
+  const { toast } = useToast();
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [weight, setWeight] = useState(5);
+  const [transportMode, setTransportMode] = useState("train");
+  const [initialData, setInitialData] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchTrip = async () => {
+      try {
+        const res = await fetch(`/api/trips/${tripId}`);
+        if (!res.ok) {
+          toast("Failed to load trip data", "error");
+          router.push("/dashboard");
+          return;
+        }
+        const data = await res.json();
+        setInitialData(data);
+        setWeight(data.availableWeight);
+        setTransportMode(data.transportMode);
+      } catch (err) {
+        console.error(err);
+        toast("An error occurred while fetching trip", "error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (tripId) fetchTrip();
+  }, [tripId, router, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    
+    try {
+      const formData = new FormData(e.target as HTMLFormElement);
+      const data = {
+        fromCity: formData.get("from"),
+        toCity: formData.get("to"),
+        departureDate: formData.get("date"),
+        departureTime: formData.get("time"),
+        transportMode: transportMode,
+        availableWeight: weight, // use weight state
+        pricePerKg: formData.get("pricePerKg"),
+        description: formData.get("note"),
+      };
+
+      const res = await fetch(`/api/trips/${tripId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to update trip");
+      }
+
+      toast("✅ Trip updated successfully!", "success");
+      setSuccess(true);
+      setTimeout(() => router.push("/dashboard"), 1500);
+    } catch (err: any) {
+      toast(err.message || "Error updating trip", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this trip? This action cannot be undone.")) return;
+    
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/trips/${tripId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to delete trip");
+      }
+
+      toast("🗑️ Trip deleted successfully", "success");
+      router.push("/dashboard");
+    } catch (err: any) {
+      toast(err.message || "Error deleting trip", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-teal-600" />
+        <p className="font-bold text-gray-500">Loading trip details...</p>
+      </div>
+    );
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-4">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }} 
+          animate={{ scale: 1, opacity: 1 }}
+          className="text-center"
+        >
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+            <CheckCircle className="h-10 w-10 text-green-600" />
+          </div>
+          <h2 className="text-3xl font-bold mb-2 text-green-700 dark:text-green-400">Trip Updated!</h2>
+          <p className="text-gray-500 dark:text-gray-400">Your changes have been saved.</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8 flex justify-between items-start"
+      >
+        <div>
+          <Link href="/dashboard" className="text-sm text-teal-600 hover:underline mb-2 block">← Back to Dashboard</Link>
+          <h1 className="text-3xl font-bold flex items-center gap-2 text-gradient">
+            <Train className="h-8 w-8 text-teal-600" />
+            Edit Trip Details
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Update your route, schedule, or luggage capacity.
+          </p>
+        </div>
+        <Button 
+          variant="destructive" 
+          onClick={handleDelete}
+          disabled={saving}
+          className="gap-2 rounded-xl"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete
+        </Button>
+      </motion.div>
+
+      <div className="grid gap-8">
+        <Card className="border-0 shadow-xl overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-teal-400 to-teal-600" />
+          <CardHeader className="border-b border-gray-100 dark:border-gray-800 pb-4">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Train className="h-5 w-5 text-teal-600" />
+              Travel Details
+            </CardTitle>
+            <CardDescription>Update your route and schedule information</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-teal-600" />
+                    From City
+                  </label>
+                  <select
+                    name="from"
+                    required
+                    defaultValue={initialData.fromCity}
+                    className="flex h-11 w-full rounded-xl border border-gray-300 bg-white/50 px-4 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800/50"
+                  >
+                    <option value="">Select city</option>
+                    {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-orange-500" />
+                    To City
+                  </label>
+                  <select
+                    name="to"
+                    required
+                    defaultValue={initialData.toCity}
+                    className="flex h-11 w-full rounded-xl border border-gray-300 bg-white/50 px-4 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800/50"
+                  >
+                    <option value="">Select city</option>
+                    {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-teal-600" />
+                    Departure Date
+                  </label>
+                  <Input 
+                    type="date" 
+                    name="date" 
+                    defaultValue={initialData.departureDate ? new Date(initialData.departureDate).toISOString().split('T')[0] : ""}
+                    required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-teal-600" />
+                    Departure Time
+                  </label>
+                  <Input 
+                    type="time" 
+                    name="time" 
+                    defaultValue={initialData.departureTime}
+                    required 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Transport Mode</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { id: "train", label: "Train", icon: Train },
+                    { id: "bus", label: "Bus", icon: Bus },
+                    { id: "car", label: "Car/Cab", icon: Car },
+                    { id: "flight", label: "Flight", icon: Plane },
+                  ].map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setTransportMode(mode.id)}
+                      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                        transportMode === mode.id
+                          ? "border-teal-500 bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-400 shadow-md"
+                          : "border-gray-100 hover:border-teal-200 dark:border-gray-800 dark:hover:border-teal-900 bg-white/50 dark:bg-gray-800/50"
+                      }`}
+                    >
+                      <mode.icon className={`h-5 w-5 ${transportMode === mode.id ? "text-teal-600" : "text-gray-400"}`} />
+                      <span className="text-xs font-semibold">{mode.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                <CardTitle className="text-xl flex items-center gap-2 mb-1">
+                  <Weight className="h-5 w-5 text-teal-600" />
+                  Capacity &amp; Pricing
+                </CardTitle>
+                <CardDescription className="mb-4">Update your luggage space and pricing</CardDescription>
+                
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-medium">Available Weight (kg)</label>
+                      <Badge variant="secondary">Max 20kg</Badge>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="range"
+                        min="1"
+                        max="20"
+                        value={weight}
+                        onChange={(e) => setWeight(Number(e.target.value))}
+                        className="flex-1 accent-teal-600"
+                      />
+                      <span className="font-bold text-lg w-14 text-center text-teal-700 dark:text-teal-400">{weight}kg</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <IndianRupee className="h-4 w-4 text-green-600" />
+                      Price per kg (₹)
+                    </label>
+                    <Input 
+                      type="number" 
+                      name="pricePerKg" 
+                      placeholder="e.g. 150" 
+                      defaultValue={initialData.pricePerKg}
+                      min="50" 
+                      required 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Additional Note (Optional)</label>
+                <textarea 
+                  name="note"
+                  defaultValue={initialData.description}
+                  placeholder="e.g. Traveling via Shatabdi, can carry fragile items carefully."
+                  className="flex min-h-[100px] w-full rounded-xl border border-gray-300 bg-white/50 px-4 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800/50 resize-none"
+                />
+              </div>
+
+              <div className="rounded-xl bg-teal-50 dark:bg-teal-900/10 p-4 border border-teal-100 dark:border-teal-800/30 flex gap-3">
+                <Info className="h-5 w-5 text-teal-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-teal-800 dark:text-teal-300">
+                  Changing your price or weight might affect existing matches. Consider notifying pending requestors if changes are significant.
+                </p>
+              </div>
+
+              <Button type="submit" disabled={saving} className="w-full h-12 text-lg gap-2 rounded-xl shadow-xl shadow-teal-500/10">
+                {saving ? (
+                  <><Loader2 className="h-5 w-5 animate-spin" /> Saving...</>
+                ) : (
+                  <><Save className="h-5 w-5" /> Save Changes</>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

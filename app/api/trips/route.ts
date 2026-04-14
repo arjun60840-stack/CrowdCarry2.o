@@ -18,8 +18,8 @@ export async function GET() {
     }
 
     const trips = await prisma.trip.findMany({
-      where: { userId },
       orderBy: { departureDate: "asc" },
+      include: { user: true },
     });
 
     return NextResponse.json(trips);
