@@ -1,48 +1,40 @@
-// CrowdCarry - Prisma Schema (Highly Robust Cloud Version)
-// Optimized for Vercel + Neon Deployment
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  // We use the pooled URL for the main connection
-  url      = env("DATABASE_URL")
-  // We add a directUrl for the build phase (This fixes the P1012 error on Vercel)
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-// Model definitions (Remain identical to ensure No code changes needed)
-// ...
 model User {
-  id              String    @id @default(cuid())
-  name            String?
-  email           String?   @unique
-  phone           String?   @unique
-  emailVerified   DateTime?
-  image           String?
-  role            String    @default("BOTH")
-  trustScore      Int       @default(90)
-  aadhaarVerified Boolean   @default(false)
-  bio             String?
-  city            String?
-  totalEarnings   Float     @default(0)
-  totalDeliveries Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  accounts     Account[]
-  sessions     Session[]
-  trips        Trip[]
-  packages     Package[]
-  sentMessages Message[]    @relation("SentMessages")
-  receivedMsgs Message[]    @relation("ReceivedMessages")
-  ratingsGiven Rating[]     @relation("RatingGiver")
-  ratingsRecvd Rating[]     @relation("RatingReceiver")
-  transactions Transaction[]
-  travelerDeliveries Delivery[] @relation("Traveler")
-  senderDeliveries   Delivery[] @relation("Sender")
+  id                 String        @id @default(cuid())
+  name               String?
+  email              String?       @unique
+  phone              String?       @unique
+  emailVerified      DateTime?
+  image              String?
+  role               String        @default("BOTH")
+  trustScore         Int           @default(90)
+  aadhaarVerified    Boolean       @default(false)
+  bio                String?
+  city               String?
+  totalEarnings      Float         @default(0)
+  totalDeliveries    Int           @default(0)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  accounts           Account[]
+  senderDeliveries   Delivery[]    @relation("Sender")
+  travelerDeliveries Delivery[]    @relation("Traveler")
+  receivedMsgs       Message[]     @relation("ReceivedMessages")
+  sentMessages       Message[]     @relation("SentMessages")
+  packages           Package[]
+  ratingsGiven       Rating[]      @relation("RatingGiver")
+  ratingsRecvd       Rating[]      @relation("RatingReceiver")
+  sessions           Session[]
+  transactions       Transaction[]
+  trips              Trip[]
 }
 
 model Account {
@@ -58,8 +50,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -69,8 +60,7 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -82,67 +72,64 @@ model VerificationToken {
 }
 
 model Trip {
-  id             String     @id @default(cuid())
-  userId         String
-  fromCity       String
-  toCity         String
-  departureDate  DateTime
-  departureTime  String
+  id              String     @id @default(cuid())
+  userId          String
+  fromCity        String
+  toCity          String
+  departureDate   DateTime
+  departureTime   String
   availableWeight Float
-  pricePerKg     Float
-  transportMode  String     @default("train")
-  description    String?
-  status         String     @default("UPCOMING")
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deliveries Delivery[]
+  pricePerKg      Float
+  transportMode   String     @default("train")
+  description     String?
+  status          String     @default("UPCOMING")
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  deliveries      Delivery[]
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Package {
-  id            String        @id @default(cuid())
+  id            String     @id @default(cuid())
   userId        String
   fromCity      String
   toCity        String
   weight        Float
   description   String
-  urgency       String        @default("MEDIUM")
+  urgency       String     @default("MEDIUM")
   preferredDate DateTime
-  status        String        @default("POSTED")
+  status        String     @default("POSTED")
   estimatedCost Float?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
   imageUrl      String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deliveries Delivery[]
+  deliveries    Delivery[]
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Delivery {
-  id           String         @id @default(cuid())
-  tripId       String
-  packageId    String
-  travelerId   String
-  senderId     String
-  status       String         @default("PENDING")
-  matchScore   Int            @default(0)
-  pickupOtp    String?
-  deliveryOtp  String?
-  price        Float
-  pickedUpAt   DateTime?
-  deliveredAt  DateTime?
-  pickupImageUrl   String?
+  id               String    @id @default(cuid())
+  tripId           String
+  packageId        String
+  travelerId       String
+  senderId         String
+  status           String    @default("PENDING")
+  matchScore       Int       @default(0)
+  pickupOtp        String?
+  deliveryOtp      String?
+  price            Float
+  pickedUpAt       DateTime?
+  deliveredAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   deliveryImageUrl String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-
-  trip     Trip    @relation(fields: [tripId], references: [id])
-  package  Package @relation(fields: [packageId], references: [id])
-  traveler User    @relation("Traveler", fields: [travelerId], references: [id])
-  sender   User    @relation("Sender", references: [id], fields: [senderId])
-  messages Message[]
-  ratings  Rating[]
+  pickupImageUrl   String?
+  package          Package   @relation(fields: [packageId], references: [id])
+  sender           User      @relation("Sender", fields: [senderId], references: [id])
+  traveler         User      @relation("Traveler", fields: [travelerId], references: [id])
+  trip             Trip      @relation(fields: [tripId], references: [id])
+  messages         Message[]
+  ratings          Rating[]
 }
 
 model Message {
@@ -153,10 +140,9 @@ model Message {
   content    String
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
-
-  delivery Delivery @relation(fields: [deliveryId], references: [id])
-  sender   User     @relation("SentMessages", fields: [senderId], references: [id])
-  receiver User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  delivery   Delivery @relation(fields: [deliveryId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
 }
 
 model Rating {
@@ -164,25 +150,22 @@ model Rating {
   deliveryId String
   giverId    String
   receiverId String
-  score      Int      // 1-5
+  score      Int
   comment    String?
   createdAt  DateTime @default(now())
-
-  delivery Delivery @relation(fields: [deliveryId], references: [id])
-  giver    User     @relation("RatingGiver", fields: [giverId], references: [id])
-  receiver User     @relation("RatingReceiver", fields: [receiverId], references: [id])
+  delivery   Delivery @relation(fields: [deliveryId], references: [id])
+  giver      User     @relation("RatingGiver", fields: [giverId], references: [id])
+  receiver   User     @relation("RatingReceiver", fields: [receiverId], references: [id])
 }
 
 model Transaction {
-  id            String            @id @default(cuid())
-  userId        String
-  type          String
-  amount        Float
-  status        String            @default("PENDING")
-  razorpayId    String?
-  upiId         String?
-  description   String?
-  createdAt     DateTime          @default(now())
-
-  user User @relation(fields: [userId], references: [id])
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  amount      Float
+  status      String   @default("PENDING")
+  upiId       String?
+  description String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
 }

@@ -161,7 +161,7 @@ export function TechStackSlide() {
         <div className="flex flex-wrap justify-center gap-6">
           <span className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="h-4 w-4 text-green-500" /> Real-time Tracking</span>
           <span className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="h-4 w-4 text-green-500" /> AI Matching Engine</span>
-          <span className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="h-4 w-4 text-green-500" /> Razorpay Integration</span>
+          <span className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="h-4 w-4 text-green-500" /> Secure UPI Payouts</span>
         </div>
       </div>
     </div>

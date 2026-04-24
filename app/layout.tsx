@@ -46,7 +46,6 @@ export default async function RootLayout({
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossOrigin=""
         />
-        <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
       </head>
       <body className={`${inter.variable} font-sans antialiased bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300`}>
         <ThemeProvider>

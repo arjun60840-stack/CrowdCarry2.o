@@ -44,72 +44,28 @@ export default function NewPackagePage() {
     
     try {
       const formData = new FormData(e.target as HTMLFormElement);
-      const weight = parseFloat(formData.get("weight") as string);
-      const price = weight * 150; // Simple calculation: ₹150 per kg for demo
-
-      // Step 1: Create Order
-      const orderRes = await fetch("/api/payments/razorpay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: price, packageId: "temp_" + Date.now() }),
-      });
-      const order = await orderRes.json();
-
-      if (!orderRes.ok) throw new Error("Payment initialization failed");
-
-      // Step 2: Open Razorpay Checkout (Simulated since we don't have a real key)
-      const options = {
-        key: "rzp_test_demo123", // Replace with real key ID when available
-        amount: order.amount,
-        currency: "INR",
-        name: "CrowdCarry",
-        description: "Package Delivery Fee",
-        order_id: order.id,
-        handler: async function (response: any) {
-          console.log("[PAYMENT] Success:", response);
-          
-          // Step 3: Post the package after successful payment
-          const pkgData = {
-            fromCity: formData.get("fromCity"),
-            toCity: formData.get("toCity"),
-            weight: formData.get("weight"),
-            preferredDate: formData.get("preferredDate"),
-            urgency: urgency,
-            description: formData.get("description"),
-            imageUrl: imageUrl || null,
-            paymentId: response.razorpay_payment_id
-          };
-
-          const res = await fetch("/api/packages", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(pkgData),
-          });
-
-          if (!res.ok) throw new Error("Failed to post package");
-          setSuccess(true);
-          setTimeout(() => router.push("/dashboard"), 2000);
-        },
-        prefill: {
-          name: "User Name",
-          contact: "9999999999",
-        },
-        theme: { color: "#0d9488" },
+      
+      // Post the package directly
+      const pkgData = {
+        fromCity: formData.get("fromCity"),
+        toCity: formData.get("toCity"),
+        weight: formData.get("weight"),
+        preferredDate: formData.get("preferredDate"),
+        urgency: urgency,
+        description: formData.get("description"),
+        imageUrl: imageUrl || null,
       };
 
-      // Since we are in a demo, we simulate the success if the script fails or just for speed
-      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-      if (typeof (window as any).Razorpay === "undefined") {
-        console.warn("Razorpay script not loaded. Simulating success for demo flow...");
-        setTimeout(() => {
-          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-          (options as any).handler({ razorpay_payment_id: "pay_demo_" + Date.now() });
-        }, 1500);
-      } else {
-        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-      }
+      const res = await fetch("/api/packages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pkgData),
+      });
+
+      if (!res.ok) throw new Error("Failed to post package");
+      
+      setSuccess(true);
+      setTimeout(() => router.push("/dashboard"), 2000);
 
     } catch (err) {
       console.error(err);

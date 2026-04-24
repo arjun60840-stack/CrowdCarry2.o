@@ -239,7 +239,6 @@ async function main() {
         type: "PAYMENT",
         amount: 450,
         status: "COMPLETED",
-        razorpayId: "pay_demo_123",
         description: "Payment for delivery DEL-001",
       },
       {

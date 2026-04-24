@@ -182,7 +182,7 @@ export default function EarningsPage() {
                 <Button variant="ghost" size="sm" className="ml-auto p-0 h-auto text-teal-600 text-[10px] font-bold">Edit</Button>
               </div>
               <p className="text-[10px] text-gray-400 text-center">
-                All payouts are processed instantly via Razorpay X for verified travelers.
+                All payouts are processed securely and instantly for verified travelers.
               </p>
               <Button className="w-full gap-2 rounded-xl" variant="outline">
                 Manage Bank Accounts
